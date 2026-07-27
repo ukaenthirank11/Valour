@@ -1,0 +1,191 @@
+const header = document.querySelector(".site-header");
+const menuToggle = document.querySelector(".menu-toggle");
+const navLinks = document.querySelectorAll(".site-nav a");
+const navDropdown = document.querySelector(".nav-dropdown");
+const navDropdownToggle = document.querySelector(".nav-dropdown-toggle");
+const revealItems = document.querySelectorAll(".reveal");
+const counters = document.querySelectorAll("[data-count]");
+const serviceCards = document.querySelectorAll(".service-card");
+const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+const runWhenIdle = (callback) => {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(callback, { timeout: 1500 });
+    return;
+  }
+
+  window.setTimeout(callback, 120);
+};
+
+const updateHeader = () => {
+  header.classList.toggle("scrolled", window.scrollY > 8);
+};
+
+const isMobileNav = () => window.matchMedia("(max-width: 760px)").matches;
+
+const openDropdownOnMobile = (open) => {
+  if (!navDropdown || !navDropdownToggle || !isMobileNav()) {
+    return;
+  }
+
+  navDropdown.classList.toggle("dropdown-open", open);
+  navDropdownToggle.setAttribute("aria-expanded", String(open));
+};
+
+updateHeader();
+window.addEventListener("scroll", updateHeader, { passive: true });
+
+menuToggle.addEventListener("click", () => {
+  const isOpen = document.body.classList.toggle("nav-open");
+  menuToggle.setAttribute("aria-expanded", String(isOpen));
+  openDropdownOnMobile(false);
+});
+
+navLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    document.body.classList.remove("nav-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+    openDropdownOnMobile(false);
+  });
+});
+
+if (navDropdown && navDropdownToggle) {
+  const closeDropdown = () => {
+    navDropdown.classList.remove("dropdown-open");
+    navDropdownToggle.setAttribute("aria-expanded", "false");
+  };
+
+  navDropdownToggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    const isOpen = navDropdown.classList.toggle("dropdown-open");
+    navDropdownToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!navDropdown.contains(event.target) && !menuToggle.contains(event.target)) {
+      closeDropdown();
+    }
+  });
+
+  navDropdown.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", closeDropdown);
+  });
+}
+
+const revealObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("visible");
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  },
+  { threshold: 0.14 }
+);
+
+revealItems.forEach((item) => revealObserver.observe(item));
+
+const animateCounter = (counter) => {
+  const target = Number(counter.dataset.count);
+  const suffix = counter.dataset.suffix || "";
+  const duration = 1200;
+  const start = performance.now();
+
+  const draw = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    counter.textContent = `${Math.round(target * eased)}${suffix}`;
+
+    if (progress < 1) {
+      requestAnimationFrame(draw);
+    }
+  };
+
+  requestAnimationFrame(draw);
+};
+
+const counterObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        animateCounter(entry.target);
+        counterObserver.unobserve(entry.target);
+      }
+    });
+  },
+  { threshold: 0.65 }
+);
+
+counters.forEach((counter) => counterObserver.observe(counter));
+
+if (canHover && serviceCards.length) {
+  runWhenIdle(() => {
+    serviceCards.forEach((card) => {
+      let hoverFrame = null;
+
+      const moveCard = (event) => {
+        if (!event.clientX && !event.clientY) {
+          return;
+        }
+
+        const rect = card.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateY = ((x - centerX) / centerX) * 16;
+        const rotateX = ((centerY - y) / centerY) * 16;
+        const glowX = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        const glowY = Math.max(0, Math.min(100, (y / rect.height) * 100));
+
+        if (hoverFrame) {
+          cancelAnimationFrame(hoverFrame);
+        }
+
+        hoverFrame = requestAnimationFrame(() => {
+          card.classList.add("is-hovered");
+          card.style.setProperty("--tilt-x", `${rotateX.toFixed(2)}deg`);
+          card.style.setProperty("--tilt-y", `${rotateY.toFixed(2)}deg`);
+          card.style.setProperty("--glow-x", `${glowX.toFixed(1)}%`);
+          card.style.setProperty("--glow-y", `${glowY.toFixed(1)}%`);
+        });
+      };
+
+      const startHover = (event) => {
+        card.classList.add("is-hovered");
+        moveCard(event);
+      };
+
+      card.addEventListener("mouseenter", startHover);
+      card.addEventListener("pointerenter", startHover);
+      card.addEventListener("mousemove", moveCard);
+      card.addEventListener("pointermove", moveCard);
+
+      const endHover = () => {
+        if (hoverFrame) {
+          cancelAnimationFrame(hoverFrame);
+          hoverFrame = null;
+        }
+
+        card.classList.remove("is-hovered");
+        card.style.setProperty("--tilt-x", "0deg");
+        card.style.setProperty("--tilt-y", "0deg");
+        card.style.setProperty("--glow-x", "78%");
+        card.style.setProperty("--glow-y", "18%");
+      };
+
+      card.addEventListener("mouseleave", endHover);
+      card.addEventListener("pointerleave", endHover);
+
+      card.addEventListener("pointerdown", () => {
+        card.classList.remove("is-pressed");
+        void card.offsetWidth;
+        card.classList.add("is-pressed");
+      });
+
+      card.addEventListener("animationend", () => {
+        card.classList.remove("is-pressed");
+      });
+    });
+  });
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Valour Digital Agency",
+  "short_name": "Valour",
+  "description": "SEO, web design, digital marketing, branding, content, video, photography, and performance ads.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/assets/VALOUR%20LOGO/Valour-icon.png",
+      "sizes": "410x280",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
